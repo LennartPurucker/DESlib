@@ -205,7 +205,6 @@ class METADES(BaseDES):
         # check whether the meta-classifier was already trained since
         # it could have been pre-processed before
         if not hasattr(self.meta_classifier_, "classes_"):
-
             # IF it is not fitted, generate the meta-training dataset and
             # train the meta-classifier
             X_meta, y_meta = self._generate_meta_training_set()
@@ -285,9 +284,9 @@ class METADES(BaseDES):
         f1_all_classifiers = f1_all_classifiers.swapaxes(1, 2)
         f1_all_classifiers = f1_all_classifiers.reshape(-1, self.k_)
 
-        f2_all_classifiers =\
+        f2_all_classifiers = \
             self.dsel_scores_[idx_neighbors, :,
-                              self.DSEL_target_[idx_neighbors]]
+            self.DSEL_target_[idx_neighbors]]
 
         f2_all_classifiers = f2_all_classifiers.swapaxes(1, 2)
 
@@ -481,7 +480,14 @@ class METADES(BaseDES):
 
         # Get the probability for class 1 (Competent)
         competences = self.meta_classifier_.predict_proba(
-            meta_feature_vectors)[:, 1]
+            meta_feature_vectors)
+
+        # Ugly Hotfix for the cases where all models are expected to be good on the training data of the meta_clf
+        # and the meta_clf has never seen a "bad" classifier.
+        if competences.shape[1] == 1:
+            competences = competences[:, 0]
+        else:
+            competences = competences[:, 1]
 
         # Reshape the array from 1D [n_samples x n_classifiers]
         # to 2D [n_samples, n_classifiers]
@@ -520,7 +526,6 @@ class METADES(BaseDES):
 
         if (self.meta_classifier is not None and
                 not hasattr(self.meta_classifier, "predict_proba")):
-
             raise ValueError(
                 "The meta-classifier should output probability estimates")
 
