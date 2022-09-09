@@ -62,6 +62,9 @@ class BaseDS(BaseEstimator, ClassifierMixin):
                 'Using knn_classifier="faiss" requires that the FAISS library '
                 'be installed.Please check the Installation Guide.')
 
+        # Fix for edge case with not a lot of classes
+        self.base_model_enc_ = self.pool_classifiers[0].le_
+
     @abstractmethod
     def select(self, competences):
         """Select the most competent classifier for
@@ -295,6 +298,14 @@ class BaseDS(BaseEstimator, ClassifierMixin):
     def _setup_label_encoder(self, y):
         self.enc_ = LabelEncoder()
         self.enc_.fit(y)
+
+        # Check if self.classes_ differs
+        if len(self.enc_.classes_) != len(self.base_model_enc_.classes_):
+            print("The number of seen classes differs for the base models and the ensemble.",
+                  "We fix this by using the base model's label encoder.")
+            # TO fix it, we use the label encoder of the base models
+            self.enc_ = self.base_model_enc_
+
         self.classes_ = self.enc_.classes_
 
     def _encode_base_labels(self, y):
